@@ -3,8 +3,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-
+import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,13 +40,13 @@ public class PageRank {
 		boolean success = step1(args[0], args[1] + "/ranks0");
 		
 		// Step 2
-		ArrayList<Float> lastRanks = getRanks(fs, args[1] + "/ranks0");
+		HashMap<Integer, Float> lastRanks = getRanks(fs, args[1] + "/ranks0");
 		for (int i = 0; i < maxRuns; i++) 
 		{
 			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1), dampingFactor);
 			
 			// Calculate diff of ranks
-			ArrayList<Float> newRanks = getRanks(fs, args[1] + "/ranks" + (i + 1));
+			HashMap<Integer, Float> newRanks = getRanks(fs, args[1] + "/ranks" + (i + 1));
 			float diff = calculateDiff(lastRanks, newRanks);
 			System.out.println("Run #" + (i + 1) + " finished (score diff: " + diff + ").");
 			
@@ -156,7 +155,7 @@ public class PageRank {
 		}
 	}
 	
-	private static ArrayList<Float> getRanks(FileSystem fs, String dir) throws Exception
+	private static HashMap<Integer, Float> getRanks(FileSystem fs, String dir) throws Exception
 	{
 		Path path = new Path(dir + "/part-r-00000");
 		if (!fs.exists(path))
@@ -164,25 +163,25 @@ public class PageRank {
 		
 		BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
 		String line;
-		ArrayList<Float> ranks = new ArrayList<Float>();
+		HashMap<Integer, Float> ranks = new HashMap<Integer, Float>();
 		
 		while ((line = br.readLine()) != null)
 		{
-			ranks.add(Float.parseFloat(line.split("\t")[1]));
+			String[] split = line.split("\t");
+			ranks.put(Integer.parseInt(split[0]), Float.parseFloat(split[1]));
 		}
 		
 		return ranks;
 	}
 	
-	private static float calculateDiff(ArrayList<Float> lastRanks, ArrayList<Float> newRanks)
+	private static float calculateDiff(HashMap<Integer, Float> lastRanks, HashMap<Integer, Float> newRanks)
 	{
-		if (lastRanks.size() != newRanks.size())
-			return -1f;
-		
 		float diff = 0;
-		for (int i = 0; i < lastRanks.size(); i++)
+		
+		for (int key : newRanks.keySet())
 		{
-			diff += Math.abs(lastRanks.get(i) - newRanks.get(i));
+			float lri = lastRanks.containsKey(key) ? lastRanks.get(key) : 0;
+			diff += Math.abs(newRanks.get(key) - lri);
 		}
 		
 		return diff;
