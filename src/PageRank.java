@@ -1,6 +1,8 @@
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -8,12 +10,12 @@ import org.apache.hadoop.io.*;
 
 public class PageRank {
 	
-	private final static int RUNS = 1;
+	private static int MAX_RUNS = 1;
 	
-	// args example = ["/input", "/output", "/input/pagerank_data.txt", "0.85"]
+	// args example = ["/input", "/output", "/input/pagerank_data.txt", "0.85", "5", "true", "true"]
 	public static void main(String[] args) throws Exception
 	{
-		if (args.length != 3)
+		if (args.length != 6)
 		{
 			System.out.println("Invalid arguments, expected 4 (inputpath, outputpath, datapath).");
 			System.exit(1);
@@ -21,26 +23,38 @@ public class PageRank {
 		
 		FileSystem fs = FileSystem.get(new Configuration());
 			
-		// Deleting the output folder if needed
-		Path outputPath = new Path(args[1]);
-		if (fs.exists(outputPath))
+		// Deleting the output folder if asked/needed
+		if (Boolean.parseBoolean(args[5]))
 		{
-			System.out.println("Deleting /output..");
-			fs.delete(outputPath, true);
+			Path outputPath = new Path(args[1]);
+			if (fs.exists(outputPath))
+			{
+				System.out.println("Deleting /output..");
+				fs.delete(outputPath, true);
+			}
 		}
 		
 		// Step 1
 		boolean success = step1(args[0], args[1] + "/ranks0");
 		
 		// Step 2
-		for (int i = 0; i < RUNS; i++) 
+		float dampingFactor = Float.parseFloat(args[3]);
+		MAX_RUNS = Integer.parseInt(args[4]);
+		
+		for (int i = 0; i < MAX_RUNS; i++) 
 		{
 			System.out.println("Run #" + (i + 1));
-			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1));
+			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1), dampingFactor);
 		}
 		
 		// Step 3
-		success = success && step3(args[1] + "/ranks" + RUNS, args[1] + "/ranking", args[2]);
+		success = success && step3(args[1] + "/ranks" + MAX_RUNS, args[1] + "/ranking", args[2]);
+		
+		// Show results if asked
+		if (Boolean.parseBoolean(args[6]))
+		{
+			showResults(fs, args[1] + "/ranking");
+		}
 		
 		System.exit(success ? 0 : 1);
 	}
@@ -68,10 +82,11 @@ public class PageRank {
 		return job.waitForCompletion(true);
 	}
 	
-	private static boolean step2(String input, String output) throws Exception
+	private static boolean step2(String input, String output, float dampingFactor) throws Exception
 	{
 		Configuration conf = new Configuration();
 		conf.set("mapreduce.fileoutputcommitter.marksuccessfuljobs", "false");
+		conf.setFloat("df", dampingFactor);
 		
 		System.out.println("Step 2..");
 		Job job = Job.getInstance(conf, "Step 2");
@@ -110,6 +125,23 @@ public class PageRank {
 		FileOutputFormat.setOutputPath(job, new Path(output));
 		
 		return job.waitForCompletion(true);
+	}
+	
+	private static void showResults(FileSystem fs, String dir) throws Exception
+	{
+		Path path = new Path(dir + "/part-r-00000");
+		if (!fs.exists(path))
+		{
+			System.out.println("The file part-r-00000 doesn't exist.");
+			return;
+		}
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
+		String line;
+		while ((line = br.readLine()) != null)
+		{
+			System.out.println(line);
+		}
 	}
 	
 }

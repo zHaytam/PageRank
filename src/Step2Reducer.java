@@ -4,6 +4,14 @@ import org.apache.hadoop.mapreduce.Reducer;
 
 public class Step2Reducer extends Reducer<Text, Text, Text, Text> 
 {
+	
+	private float dampingFactor;
+	
+	@Override
+	protected void setup(Context context)
+	{
+		dampingFactor = context.getConfiguration().getFloat("df", 0.85f);
+	}
 
 	public void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException 
 	{
@@ -27,7 +35,7 @@ public class Step2Reducer extends Reducer<Text, Text, Text, Text>
 			}
 		}
 		
-		totalRank = (1f - 0.85f) + (0.85f * totalRank);
+		totalRank = (1 - dampingFactor) + (dampingFactor * totalRank);
 		context.write(key, new Text(Float.toString(totalRank) + "\t" + outlinks));
 	}
 	
