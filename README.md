@@ -54,13 +54,13 @@ Reduce(Node, Text[]):
 	Write(Node, totalRank + '\t' + outlinks)
 ```
 
-### Step 3
+## Step 3
 
 This step basically only needs a mapper and the use of the shuffle&sort phase to print the rankings but can use a Reducer to, for example, print the top N ranked pages.
 - **Setup:** Before mapping, we read the input data (the NC nodes lines) and fill a `HashMap` with each node and its corresponding url, this is simply to be able to print the url of the pages in the ranking instead of just the node ids.
 - **Mapper:** Receives the last ranks output (node, rank, outlinks) and outputs for each: `<FloatWritable, Text>` (e.g. `<1.6375, "http://www.hollins.edu/">`). We write the rank as the key so that the shuffle&sort phase (using a custom SortComparator) sorts our entries in a descending order (thus not needing a Reducer).
 
-### Testing
+## Testing
 
  1. Download the sources.
  2. Compile to a .jar file.
