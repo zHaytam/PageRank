@@ -15,12 +15,14 @@ public class PageRank {
 	// args example = ["/input", "/output", "/input/pagerank_data.txt", "0.85", "5", "true", "true"]
 	public static void main(String[] args) throws Exception
 	{
-		if (args.length != 6)
+		if (args.length != 7)
 		{
-			System.out.println("Invalid arguments, expected 4 (inputpath, outputpath, datapath).");
+			System.out.println("Invalid arguments, expected 7 (inputpath, outputpath, datapath, df, maxruns, deleteoutput, showresults).");
 			System.exit(1);
 		}
-		
+
+		MAX_RUNS = Integer.parseInt(args[4]);
+		float dampingFactor = Float.parseFloat(args[3]);
 		FileSystem fs = FileSystem.get(new Configuration());
 			
 		// Deleting the output folder if asked/needed
@@ -38,13 +40,12 @@ public class PageRank {
 		boolean success = step1(args[0], args[1] + "/ranks0");
 		
 		// Step 2
-		float dampingFactor = Float.parseFloat(args[3]);
-		MAX_RUNS = Integer.parseInt(args[4]);
-		
+		float score = calculateScore(fs, args[1] + "/ranks0");
 		for (int i = 0; i < MAX_RUNS; i++) 
 		{
-			System.out.println("Run #" + (i + 1));
+			System.out.println("Run #" + (i + 1) + " (previous score: " + score + ")");
 			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1), dampingFactor);
+			score = calculateScore(fs, args[1] + "/ranks" + (i + 1));
 		}
 		
 		// Step 3
@@ -142,6 +143,23 @@ public class PageRank {
 		{
 			System.out.println(line);
 		}
+	}
+	
+	private static float calculateScore(FileSystem fs, String dir) throws Exception
+	{
+		Path path = new Path(dir + "/part-r-00000");
+		if (!fs.exists(path))
+			throw new Exception("The file part-r-00000 doesn't exist.");
+		
+		BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
+		String line;
+		float sum = 0;
+		while ((line = br.readLine()) != null)
+		{
+			sum += Float.parseFloat(line.split("\t")[1]);
+		}
+		
+		return sum;
 	}
 	
 }
