@@ -54,6 +54,9 @@ Reduce(Node, Text[]):
 	Write(Node, totalRank + '\t' + outlinks)
 ```
 
+This step is ran X times (The X must be given in the arguments) or until a minimum score is met.
+The score is calculated as follows: `∑i(|lastRanks[i] - newRanks[i]|)`.
+
 ## Step 3
 
 This step basically only needs a mapper and the use of the shuffle&sort phase to print the rankings but can use a Reducer to, for example, print the top N ranked pages.
@@ -71,5 +74,6 @@ This step basically only needs a mapper and the use of the shuffle&sort phase to
     - **/input/pagerank_data.txt:** The data file (used to get the urls in step 3)
     - **0.85:** The damping factor.
     - **5:** The maximum number of iterations.
+    - **0.01:** The criterion to break from the iterations (minimum difference).
     - **true:** Delete the output folder before starting (if found).
     - **true:** Show the results at the end (/ranking/part-r-00000 file).

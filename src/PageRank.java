@@ -12,23 +12,22 @@ import org.apache.hadoop.io.*;
 
 public class PageRank {
 	
-	private static int MAX_RUNS = 1;
-	
-	// args example = ["/input", "/output", "/input/pagerank_data.txt", "0.85", "5", "true", "true"]
+	// args example = ["/input", "/output", "/input/pagerank_data.txt", "0.85", "5", "0.01", "true", "true"]
 	public static void main(String[] args) throws Exception
 	{
-		if (args.length != 7)
+		if (args.length != 8)
 		{
 			System.out.println("Invalid arguments, expected 7 (inputpath, outputpath, datapath, df, maxruns, deleteoutput, showresults).");
 			System.exit(1);
 		}
 
-		MAX_RUNS = Integer.parseInt(args[4]);
+		int maxRuns = Integer.parseInt(args[4]);
 		float dampingFactor = Float.parseFloat(args[3]);
+		float mindiff = Float.parseFloat(args[5]);
 		FileSystem fs = FileSystem.get(new Configuration());
 			
 		// Deleting the output folder if asked/needed
-		if (Boolean.parseBoolean(args[5]))
+		if (Boolean.parseBoolean(args[6]))
 		{
 			Path outputPath = new Path(args[1]);
 			if (fs.exists(outputPath))
@@ -43,7 +42,7 @@ public class PageRank {
 		
 		// Step 2
 		ArrayList<Float> lastRanks = getRanks(fs, args[1] + "/ranks0");
-		for (int i = 0; i < MAX_RUNS; i++) 
+		for (int i = 0; i < maxRuns; i++) 
 		{
 			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1), dampingFactor);
 			
@@ -51,14 +50,20 @@ public class PageRank {
 			ArrayList<Float> newRanks = getRanks(fs, args[1] + "/ranks" + (i + 1));
 			float diff = calculateDiff(lastRanks, newRanks);
 			System.out.println("Run #" + (i + 1) + " finished (score diff: " + diff + ").");
-			lastRanks = newRanks;
+			
+			// If the diff is lower than the mindiff we stop the iterations
+			if (diff < mindiff)
+				break;
+			// Otherwise continue
+			else
+				lastRanks = newRanks;
 		}
 		
 		// Step 3
-		success = success && step3(args[1] + "/ranks" + MAX_RUNS, args[1] + "/ranking", args[2]);
+		success = success && step3(args[1] + "/ranks" + maxRuns, args[1] + "/ranking", args[2]);
 		
 		// Show results if asked
-		if (Boolean.parseBoolean(args[6]))
+		if (Boolean.parseBoolean(args[7]))
 		{
 			showResults(fs, args[1] + "/ranking");
 		}
