@@ -2,11 +2,11 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 
+// Taken from: https://gist.github.com/geofferyzh/3839714
+
 public class SortFloatComparator extends WritableComparator 
 {
 
-	//Constructor.
-	 
 	protected SortFloatComparator() {
 		super(FloatWritable.class, true);
 	}
@@ -19,4 +19,5 @@ public class SortFloatComparator extends WritableComparator
 		
 		return -1 * k1.compareTo(k2);
 	}
+	
 }

@@ -1,0 +1,15 @@
+5 9
+1 http://www1.hollins.edu/ 
+2 http://www.hollins.edu/ 
+3 http://www1.hollins.edu/Docs/CompTech/Network/webmail_faq.htm 
+4 http://www1.hollins.edu/Docs/Forms/GetForms.htm 
+5 http://www1.hollins.edu/Docs/misc/travel.htm
+1 2
+1 3
+2 1
+2 4
+3 2
+5 2
+5 3
+5 4
+5 1
