@@ -3,6 +3,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,12 +42,16 @@ public class PageRank {
 		boolean success = step1(args[0], args[1] + "/ranks0");
 		
 		// Step 2
-		float score = calculateScore(fs, args[1] + "/ranks0");
+		ArrayList<Float> lastRanks = getRanks(fs, args[1] + "/ranks0");
 		for (int i = 0; i < MAX_RUNS; i++) 
 		{
-			System.out.println("Run #" + (i + 1) + " (previous score: " + score + ")");
 			success = success && step2(args[1] + "/ranks" + i, args[1] + "/ranks" + (i + 1), dampingFactor);
-			score = calculateScore(fs, args[1] + "/ranks" + (i + 1));
+			
+			// Calculate diff of ranks
+			ArrayList<Float> newRanks = getRanks(fs, args[1] + "/ranks" + (i + 1));
+			float diff = calculateDiff(lastRanks, newRanks);
+			System.out.println("Run #" + (i + 1) + " finished (score diff: " + diff + ").");
+			lastRanks = newRanks;
 		}
 		
 		// Step 3
@@ -145,7 +151,7 @@ public class PageRank {
 		}
 	}
 	
-	private static float calculateScore(FileSystem fs, String dir) throws Exception
+	private static ArrayList<Float> getRanks(FileSystem fs, String dir) throws Exception
 	{
 		Path path = new Path(dir + "/part-r-00000");
 		if (!fs.exists(path))
@@ -153,13 +159,28 @@ public class PageRank {
 		
 		BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
 		String line;
-		float sum = 0;
+		ArrayList<Float> ranks = new ArrayList<Float>();
+		
 		while ((line = br.readLine()) != null)
 		{
-			sum += Float.parseFloat(line.split("\t")[1]);
+			ranks.add(Float.parseFloat(line.split("\t")[1]));
 		}
 		
-		return sum;
+		return ranks;
+	}
+	
+	private static float calculateDiff(ArrayList<Float> lastRanks, ArrayList<Float> newRanks)
+	{
+		if (lastRanks.size() != newRanks.size())
+			return -1f;
+		
+		float diff = 0;
+		for (int i = 0; i < lastRanks.size(); i++)
+		{
+			diff += Math.abs(lastRanks.get(i) - newRanks.get(i));
+		}
+		
+		return diff;
 	}
 	
 }
